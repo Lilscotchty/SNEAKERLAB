@@ -1,122 +1,274 @@
-import { useEffect, useState } from 'react';
-import { ArrowLeftRight, MousePointer2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { 
+  Maximize2, 
+  RotateCcw, 
+  Rotate3d, 
+  Sparkles, 
+  Layers, 
+  Cpu, 
+  Eye, 
+  ZoomIn, 
+  ZoomOut,
+  Sliders,
+  CheckCircle2,
+  ExternalLink
+} from 'lucide-react';
 
-type PexelsPhoto = {
-  url: string;
-  alt: string;
-};
+const PLAYCANVAS_URL = "https://playcanv.as/p/EZ7dJzfc/";
 
-export type FrameSet = {
-  id: string;
-  name: string;
-  photos: PexelsPhoto[];
-};
+export default function SneakerLab() {
+  const iframeRef = useRef(null);
+  const containerRef = useRef(null);
+  
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeTab, setActiveTab] = useState('3d-lab');
+  const [selectedPreset, setSelectedPreset] = useState('default');
+  const [wireframeMode, setWireframeMode] = useState(false);
+  const [lighting, setLighting] = useState('studio');
 
-export type InteractionMode = 'scroll' | 'drag';
+  // Specs overlay panel
+  const sneakerSpecs = [
+    { label: "Mesh Resolution", value: "142,500 Polys", icon: Layers },
+    { label: "Texture Engine", value: "4K PBR Materials", icon: Sparkles },
+    { label: "Render Engine", value: "PlayCanvas WebGL 2.0", icon: Cpu },
+    { label: "Interactive Rig", value: "360° Orbit & Zoom", icon: Rotate3d },
+  ];
 
-const PHOTO_SETS: Record<string, PexelsPhoto[]> = {
-  runner: [
-    { url: 'https://images.pexels.com/photos/9853346/pexels-photo-9853346.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'Studio white sneaker' },
-    { url: 'https://images.pexels.com/photos/18202585/pexels-photo-18202585.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'White sneaker close up' },
-    { url: 'https://images.pexels.com/photos/12628400/pexels-photo-12628400.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'Sneaker in dark studio' },
-    { url: 'https://images.pexels.com/photos/18202568/pexels-photo-18202568.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'White sneakers pair' },
-  ],
-  court: [
-    { url: 'https://images.pexels.com/photos/12740481/pexels-photo-12740481.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'Suede court sneaker' },
-    { url: 'https://images.pexels.com/photos/12601012/pexels-photo-12601012.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'Court sneaker detail' },
-    { url: 'https://images.pexels.com/photos/18188520/pexels-photo-18188520.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'Checkerboard sneaker' },
-    { url: 'https://images.pexels.com/photos/7238943/pexels-photo-7238943.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'Court style sneaker' },
-  ],
-  trail: [
-    { url: 'https://images.pexels.com/photos/31650329/pexels-photo-31650329.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'Trail shoes on rocks' },
-    { url: 'https://images.pexels.com/photos/9654862/pexels-photo-9654862.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'Trail boots in mud' },
-    { url: 'https://images.pexels.com/photos/31721677/pexels-photo-31721677.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'Green trail boot' },
-    { url: 'https://images.pexels.com/photos/8729056/pexels-photo-8729056.jpeg?auto=compress&cs=tinysrgb&w=1200', alt: 'Boots on rocky trail' },
-  ],
-};
+  // Reload/Reset 3D Canvas
+  const handleResetView = () => {
+    if (iframeRef.current) {
+      iframeRef.current.src = PLAYCANVAS_URL;
+    }
+  };
 
-const FRAME_SETS: FrameSet[] = [
-  { id: 'runner', name: 'Aero Runner', photos: PHOTO_SETS.runner },
-  { id: 'court', name: 'Court Legacy', photos: PHOTO_SETS.court },
-  { id: 'trail', name: 'Terra Trail', photos: PHOTO_SETS.trail },
-];
+  // Fullscreen Handler
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
 
-export default function SneakerLab({
-  renderViewer,
-}: {
-  renderViewer: (active: FrameSet, interacted: boolean, onInteract: () => void) => React.ReactNode;
-}) {
-  const [active, setActive] = useState<FrameSet>(FRAME_SETS[0]);
-  const [interacted, setInteracted] = useState(false);
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch(err => console.error(err));
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      });
+    }
+  };
 
   return (
-    <section className="sneaker-lab" id="sneaker-lab">
-      <div className="lab-section-header">
-        <div>
-          <span className="micro-label" style={{ color: 'rgba(255,255,255,0.45)' }}>New Category — Studio 03</span>
-          <h2>The Sneaker Lab</h2>
-        </div>
-        <span className="micro-label" style={{ color: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <MousePointer2 size={14} /> Interactive 3D
-        </span>
-      </div>
+    <section id="sneaker-lab" className="w-full bg-slate-950 text-white py-16 px-4 md:px-8 relative overflow-hidden">
+      {/* Background Subtle Glow Accent */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/10 blur-[140px] rounded-full pointer-events-none" />
 
-      <div className="lab-grid">
-        <div className="lab-viewer" onPointerDown={() => setInteracted(true)}>
-          <div className="lab-viewer-inner">
-            {renderViewer(active, interacted, () => setInteracted(true))}
+      <div className="max-w-7xl mx-auto space-y-10 relative z-10">
+        
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-800 pb-8">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono uppercase tracking-wider mb-3">
+              <Sparkles className="w-3.5 h-3.5" /> Interactive 3D Experience
+            </div>
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white uppercase">
+              Sneaker <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-500">Lab</span>
+            </h2>
+            <p className="text-slate-400 mt-2 max-w-xl text-sm md:text-base">
+              Inspect footwear concepts in real-time high-fidelity 3D. Rotate, zoom, and test material textures directly inside the lab viewport.
+            </p>
           </div>
-          <div className={`lab-hint ${interacted ? 'is-hidden' : ''}`}>
-            <ArrowLeftRight size={14} style={{ color: 'rgba(255,255,255,0.6)' }} />
-            <span className="micro-label" style={{ color: 'rgba(255,255,255,0.6)' }}>Drag to rotate</span>
-          </div>
-        </div>
 
-        <div className="lab-panel">
-          {FRAME_SETS.map((fs) => (
+          {/* Navigation / Mode Toggle */}
+          <div className="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 backdrop-blur-md">
             <button
-              key={fs.id}
-              className={`lab-card ${active.id === fs.id ? 'is-active' : ''}`}
-              onClick={() => setActive(fs)}
+              onClick={() => setActiveTab('3d-lab')}
+              className={`px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
+                activeTab === '3d-lab'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              }`}
             >
-              <div className="lab-card-row">
-                <span className="lab-card-title">{fs.name}</span>
-                <span className="micro-label" style={{ color: 'rgba(255,255,255,0.4)' }}>{fs.id}</span>
-              </div>
-              <p>
-                {fs.id === 'runner' && 'Precision-engineered for daily rotation — featherweight mesh over a nitrogen-charged midsole.'}
-                {fs.id === 'court' && 'Heritage court lines, rebuilt on a sculpted gum sole. The quiet flex of the season.'}
-                {fs.id === 'trail' && 'All-terrain aggression with a rocker geometry and lugged outsole built to bite loose ground.'}
-              </p>
+              3D Viewport
             </button>
-          ))}
+            <button
+              onClick={() => setActiveTab('specs')}
+              className={`px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
+                activeTab === 'specs'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              }`}
+            >
+              Material Specs
+            </button>
+          </div>
+        </div>
 
-          <div className="lab-card" style={{ cursor: 'default', padding: 0, overflow: 'hidden' }}>
-            <div className="lab-stat-row" style={{ borderTop: 'none' }}>
-              <div className="lab-stat">
-                <span className="micro-label" style={{ color: 'rgba(255,255,255,0.4)' }}>Cushioning</span>
-                <div className="lab-stat-val">{active.id === 'trail' ? '78%' : '92%'}</div>
-                <div className="lab-stat-bar">
-                  <div className="lab-stat-fill" style={{ width: active.id === 'trail' ? '78%' : '92%' }} />
-                </div>
+        {/* MAIN LAB DISPLAY GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* 3D PLAYCANVAS VIEWER CONTAINER (Takes 8 of 12 columns on large screens) */}
+          <div className="lg:col-span-8 flex flex-col gap-4">
+            <div 
+              ref={containerRef}
+              className="relative w-full h-[500px] md:h-[620px] bg-slate-900/90 rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl group transition-all"
+            >
+              {/* PlayCanvas Embed Frame */}
+              <iframe
+                ref={iframeRef}
+                src={PLAYCANVAS_URL}
+                title="SneakerLab 3D Model"
+                className="w-full h-full border-0 rounded-2xl"
+                allow="autoplay; fullscreen; vr; xr; xr-spatial-tracking"
+                loading="lazy"
+              />
+
+              {/* Floating Glassmorphism Toolbar (Top Right) */}
+              <div className="absolute top-4 right-4 flex items-center gap-2 z-20 bg-slate-950/70 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/50 shadow-lg">
+                <button
+                  onClick={handleResetView}
+                  title="Reset 3D View"
+                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={toggleFullscreen}
+                  title="Toggle Fullscreen"
+                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </button>
+
+                <a
+                  href={PLAYCANVAS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open External Viewer"
+                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
               </div>
-              <div className="lab-stat">
-                <span className="micro-label" style={{ color: 'rgba(255,255,255,0.4)' }}>Grip</span>
-                <div className="lab-stat-val">{active.id === 'trail' ? '96%' : '71%'}</div>
-                <div className="lab-stat-bar">
-                  <div className="lab-stat-fill" style={{ width: active.id === 'trail' ? '96%' : '71%' }} />
-                </div>
-              </div>
-              <div className="lab-stat">
-                <span className="micro-label" style={{ color: 'rgba(255,255,255,0.4)' }}>Weight</span>
-                <div className="lab-stat-val">{active.id === 'trail' ? '310g' : '240g'}</div>
-                <div className="lab-stat-bar">
-                  <div className="lab-stat-fill" style={{ width: active.id === 'trail' ? '62%' : '40%' }} />
-                </div>
+
+              {/* Interactive Help Hint Overlay (Bottom Left) */}
+              <div className="absolute bottom-4 left-4 z-20 hidden md:flex items-center gap-3 bg-slate-950/70 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-800/80 text-xs text-slate-300">
+                <Rotate3d className="w-4 h-4 text-cyan-400 animate-spin-slow" />
+                <span>Drag to Rotate • Scroll to Zoom • Right-Click Drag to Pan</span>
               </div>
             </div>
+
+            {/* Quick Preset Buttons Below Canvas */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { id: 'default', name: 'Studio Standard' },
+                { id: 'neon', name: 'Cyber Neon' },
+                { id: 'clay', name: 'Clay Render' },
+                { id: 'xray', name: 'Blueprint X-Ray' }
+              ].map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => setSelectedPreset(preset.id)}
+                  className={`py-2.5 px-3 rounded-xl border text-xs font-medium text-center transition-all ${
+                    selectedPreset === preset.id
+                      ? 'bg-slate-800 border-cyan-500/50 text-cyan-400 shadow-md'
+                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  {preset.name}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* SIDE CONTROLS & SPECIFICATION PANEL (Takes 4 of 12 columns) */}
+          <div className="lg:col-span-4 space-y-6">
+            
+            {/* Model Info Card */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur-md space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Lab Prototype 01</h3>
+                  <p className="text-xs text-cyan-400 font-mono">MODEL ID: #SL-3D-2026</p>
+                </div>
+                <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" title="System Active" />
+              </div>
+
+              {/* Specs Grid */}
+              <div className="space-y-3.5">
+                {sneakerSpecs.map((spec, i) => {
+                  const Icon = spec.icon;
+                  return (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/60">
+                      <div className="flex items-center gap-2.5 text-slate-300 text-xs">
+                        <Icon className="w-4 h-4 text-cyan-400" />
+                        <span>{spec.label}</span>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-white">{spec.value}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom Interactive Lab Controls */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur-md space-y-4">
+              <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-cyan-400" /> Viewport Adjustments
+              </h4>
+
+              {/* Lighting Switcher */}
+              <div className="space-y-2">
+                <label className="text-xs text-slate-300">Environment Lighting</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['studio', 'outdoor', 'dark'].map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setLighting(mode)}
+                      className={`py-1.5 rounded-lg text-xs font-medium capitalize border transition-all ${
+                        lighting === mode
+                          ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300'
+                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Wireframe Toggle */}
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-xs text-slate-300">Show Geometry Wireframe</span>
+                <button
+                  onClick={() => setWireframeMode(!wireframeMode)}
+                  className={`w-11 h-6 rounded-full transition-colors p-1 relative flex items-center ${
+                    wireframeMode ? 'bg-cyan-500' : 'bg-slate-800'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      wireframeMode ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Quality Status Box */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/40 to-slate-900/40 border border-cyan-500/20 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-medium text-slate-200">Real-time WebGL active</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  PlayCanvas WebGL engine rendering high-detail textures directly in browser without plug-ins.
+                </p>
+              </div>
+            </div>
+
+          </div>
+
         </div>
+
       </div>
     </section>
   );
